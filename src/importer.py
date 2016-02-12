@@ -1,3 +1,4 @@
+# -*- encode: utf-8 -*-
 import xlrd
 import csv
 import datetime
@@ -20,7 +21,7 @@ class BankMovement(object):
                                      str(self.balance)])
 
     def toCsv(self):
-        return self.export(';')
+        return self.export('";"')
 
     def toHTML(self):
         return u'{0}\t{1}\t{2}\t{3}\n'.format(self.date_formated(),
@@ -52,11 +53,11 @@ class BankImporter(object):
 
 class INGBankImporter(BankImporter):
 
-    BEGINING = (5,0)
-    DATE_COLUMN_IDX = 1
-    CONCEPT_IDX = 2
-    PRICE_IDX = 3
-    ACCOUNT_BALANCE_IDX = 4
+    BEGINING = (4,0)
+    DATE_COLUMN_IDX = 0
+    CONCEPT_IDX = 1
+    PRICE_IDX = 2
+    ACCOUNT_BALANCE_IDX = 3
 
     def _parse_file(self):
 
@@ -73,15 +74,16 @@ class INGBankImporter(BankImporter):
         '''
         '''
         cell = row[INGBankImporter.DATE_COLUMN_IDX]
-        assert(cell.ctype == 3)
-        date = datetime.datetime(*xlrd.xldate_as_tuple(cell.value, 0))
+        
+        # date = datetime.datetime(*xlrd.xldate_as_tuple(cell.value, 0))
+        date = datetime.datetime.strptime(cell.value, '%d/%m/%Y')
         
         concept = row[INGBankImporter.CONCEPT_IDX].value
         
         item = BankMovement(date,
                             concept[0:concept.find('(')],
-                            self._float(row[INGBankImporter.PRICE_IDX].value),
-                            self._float(row[INGBankImporter.ACCOUNT_BALANCE_IDX].value))
+                            self._float(row[INGBankImporter.PRICE_IDX].value.replace(',', '.')),
+                            self._float(row[INGBankImporter.ACCOUNT_BALANCE_IDX].value.replace('.', '').replace(',', '.')))
         return item
                         
     def toHTMLTable(self):
@@ -126,12 +128,12 @@ class OficinaDirectaBankImporter(BankImporter):
 
 
 def run(fd):
-    ing = OficinaDirectaBankImporter(fd) #INGBankImporter(fd)
-
+    ing = INGBankImporter(fd)  # OficinaDirectaBankImporter(fd) #
+    
     for i in ing:
-        print i.toCsv()
+        print u"{}".format(i.toCsv().encode('ascii', 'ignore').decode('utf-8'))
 
 if __name__ == '__main__':
     import sys
     run(sys.argv[1])
-
+    
